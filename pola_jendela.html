@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualisasi Bingkai Jendela 1xN</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --container-bg: #fff;
+            --header-color: #1e3a8a; /* Biru Tua */
+            --frame-height: 50px;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            margin: 0;
+        }
+
+        h1 {
+            color: var(--header-color);
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        p.desc {
+            color: #6c757d;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .controls {
+            background: var(--container-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        input {
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            width: 60px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: var(--header-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover { background-color: #1e40af; }
+
+        #summary-text {
+            font-weight: bold;
+            color: #0d6efd; /* Biru Cerah */
+            margin-bottom: 20px;
+        }
+
+        /* Container untuk semua solusi jendela */
+        #result-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 1200px;
+            padding: 10px;
+        }
+
+        /* Container untuk satu baris solusi dinding */
+        .wall-solution {
+            display: flex;
+            border: 2px solid #333; /* Merepresentasikan batas dinding */
+            border-radius: 4px;
+            background-color: #e9ecef; /* Warna Dinding */
+            height: var(--frame-height);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            overflow-x: auto; /* Jika N terlalu besar */
+        }
+
+        /* Gaya Bingkai Jendela Dasar */
+        .window-frame {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            box-sizing: border-box;
+            border: 2px solid #000; /* Garis bingkai */
+            font-size: 14px;
+            white-space: nowrap;
+            /* Tambahkan efek bayangan kaca */
+            box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.4); 
+            transition: transform 0.2s;
+        }
+        
+        .window-frame:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Tipe Bingkai dan Lebar (Width) yang berbeda */
+        .frame-S {
+            width: 30px; /* Lebar 1 unit */
+            background-color: #38a169; /* Hijau (Small) */
+        }
+
+        .frame-M {
+            width: 60px; /* Lebar 2 unit */
+            background-color: #3b82f6; /* Biru (Medium) */
+        }
+
+        .frame-L {
+            width: 90px; /* Lebar 3 unit */
+            background-color: #ef4444; /* Merah (Large) */
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Visualisasi Bingkai Jendela (1xN)</h1>
+    <p class="desc">
+        Mencari semua cara menyusun bingkai jendela ukuran <b>1, 2, dan 3 unit lebar</b> untuk menutupi total panjang dinding N.
+    </p>
+
+    <div class="controls">
+        <label for="n-input">Panjang Dinding N:</label>
+        <input type="number" id="n-input" min="1" max="10" value="4">
+        <button onclick="generateWindowVisualization()">Lihat Pola</button>
+    </div>
+
+    <div id="summary-text"></div>
+
+    <div id="result-container"></div>
+
+    <script>
+        // Fungsi Utama untuk menghandle klik tombol
+        function generateWindowVisualization() {
+            const n = parseInt(document.getElementById('n-input').value);
+            const container = document.getElementById('result-container');
+            const summary = document.getElementById('summary-text');
+
+            // Validasi input
+            if (isNaN(n) || n < 1) {
+                alert("Masukkan angka N minimal 1");
+                return;
+            }
+            
+            // Batasi N karena pertumbuhannya (Tribonacci) cukup cepat
+            if (n > 15) {
+                alert("Untuk visualisasi, maksimal N adalah 15 agar layar muat dan performa terjaga.");
+                return;
+            }
+
+            container.innerHTML = ''; // Bersihkan hasil sebelumnya
+            summary.textContent = 'Sedang menghitung...';
+
+            // 1. Dapatkan semua kombinasi (Array of frame sizes: [1, 3, 2, 1, ...])
+            const allCombinations = getFrameCombinations(n);
+
+            // 2. Tampilkan info jumlah kemungkinan
+            summary.innerHTML = `Ditemukan <b>${allCombinations.length}</b> cara untuk menyusun bingkai pada dinding sepanjang ${n} unit.`;
+
+            // 3. Render setiap kombinasi ke layar
+            allCombinations.forEach(combination => {
+                const wallDiv = document.createElement('div');
+                wallDiv.className = 'wall-solution';
+
+                combination.forEach(size => {
+                    const frame = document.createElement('div');
+                    
+                    if (size === 1) {
+                        frame.className = 'window-frame frame-S';
+                        frame.innerText = '1 (S)';
+                    } else if (size === 2) {
+                        frame.className = 'window-frame frame-M';
+                        frame.innerText = '2 (M)';
+                    } else if (size === 3) {
+                        frame.className = 'window-frame frame-L';
+                        frame.innerText = '3 (L)';
+                    }
+                    
+                    wallDiv.appendChild(frame);
+                });
+
+                container.appendChild(wallDiv);
+            });
+        }
+
+        // Fungsi Rekursif untuk mencari kombinasi dengan Tribonacci-like logic
+        // Mengembalikan array berisi urutan langkah, misal: [1, 3, 2]
+        function getFrameCombinations(targetN) {
+            // Base cases
+            if (targetN === 0) return [[]]; // Selesai, kembalikan array kosong di dalam array (1 solusi)
+            if (targetN < 0) return [];     // Tidak valid
+
+            let results = [];
+
+            // Opsi 1: Taruh Bingkai Kecil (Lebar 1)
+            const resultsS = getFrameCombinations(targetN - 1);
+            resultsS.forEach(subResult => {
+                results.push([1, ...subResult]);
+            });
+
+            // Opsi 2: Taruh Bingkai Sedang (Lebar 2)
+            const resultsM = getFrameCombinations(targetN - 2);
+            resultsM.forEach(subResult => {
+                results.push([2, ...subResult]);
+            });
+            
+            // Opsi 3: Taruh Bingkai Besar (Lebar 3)
+            const resultsL = getFrameCombinations(targetN - 3);
+            resultsL.forEach(subResult => {
+                results.push([3, ...subResult]);
+            });
+
+            return results;
+        }
+    </script>
+</body>
+</html>
